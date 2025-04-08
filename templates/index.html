@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Personalized Roadmap Generator</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 20px;
+    }
+  
+    h2 {
+      margin-bottom: 15px;
+    }
+  
+    input[type="text"] {
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      width: 250px;
+      margin-right: 10px;
+    }
+  
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      background-color: #1976d2;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+  
+    button:hover {
+      background-color: #1565c0;
+    }
+  
+    #ratingsForm {
+      margin-top: 20px;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      max-width: 600px;
+    }
+  
+    .slider-block {
+      margin-bottom: 20px;
+    }
+  
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+  
+    input[type="range"] {
+      width: 80%;
+      margin-right: 10px;
+    }
+  
+    .slider-value {
+      font-weight: bold;
+      color: #1976d2;
+    }
+  </style>
+  
+</head>
+<body>
+    <h2>🚀 Personalized Roadmap Generator</h2>
+    <input type="text" id="topic" placeholder="Enter topic (e.g., Linux)" />
+    <button onclick="fetchSubtopics()">Get Subtopics</button>
+    
+    <form id="ratingsForm" style="display:none;" onsubmit="generateRoadmap(event)">
+      <h3>Rate Your Knowledge (1-10)</h3>
+      <div id="ratingsInputs"></div>
+      <br />
+      <button type="submit">Generate Personalized Roadmap</button>
+    </form>
+    
+    <div id="roadmap"></div>
+
+  <script>
+    function fetchSubtopics() {
+      const topic = document.getElementById("topic").value;
+      fetch(`/subtopics?topic=${encodeURIComponent(topic)}`)
+        .then(res => res.json())
+        .then(data => {
+          const inputsDiv = document.getElementById("ratingsInputs");
+          inputsDiv.innerHTML = "";
+          data.subtopics.forEach(sub => {
+            inputsDiv.innerHTML += `
+              <label>${sub}: </label>
+              <input type="number" name="${sub}" min="1" max="10" required><br>
+            `;
+          });
+          document.getElementById("ratingsForm").style.display = "block";
+        });
+    }
+
+    function generateRoadmap(event) {
+      event.preventDefault();
+      const topic = document.getElementById("topic").value;
+      const inputs = document.querySelectorAll("#ratingsInputs input");
+      const ratings = {};
+      inputs.forEach(input => {
+        ratings[input.name] = parseInt(input.value);
+      });
+
+      fetch("/personalized-roadmap", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic, ratings })
+      })
+      .then(res => res.json())
+      .then(data => {
+        const div = document.getElementById("roadmap");
+        if (data.personalized_roadmap) {
+          div.innerHTML = `<h3>Roadmap for ${data.topic}</h3>`;
+          const ul = document.createElement("ul");
+          for (const [sub, concepts] of Object.entries(data.personalized_roadmap)) {
+            const li = document.createElement("li");
+            li.innerHTML = `<strong>${sub}</strong>:<br> - ${concepts.join("<br> - ")}`;
+            ul.appendChild(li);
+          }
+          div.appendChild(ul);
+        } else {
+          div.innerHTML = `<p>${data.message || data.error}</p>`;
+        }
+      });
+    }
+  </script>
+</body>
+</html>
